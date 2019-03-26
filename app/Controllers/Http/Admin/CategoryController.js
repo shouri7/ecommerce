@@ -5,6 +5,11 @@
 /** @typedef {import('@adonisjs/framework/src/View')} View */
 
 const Category = use('App/Models/Category')
+const Image = use('App/Models/Image')
+const Helpers = use('Helpers')
+const {
+    str_random
+} = use('App/Helpers')
 
 /**
  * Resourceful controller for interacting with categories
@@ -51,11 +56,57 @@ class CategoryController {
      * @param {Request} ctx.request
      * @param {Response} ctx.response
      */
-    async store({request,response}) {
-      const { title, description } = request.all()
-      const category = await Category.create({title, description})
+    async store({
+        request,
+        response
+    }) {
+        try {
+            const {
+                title,
+                description
+            } = request.all()
 
-      return response.status(201).send(category)
+            // Tratamento da imagem
+            const image = request.file('image', {
+                types: ['image'],
+                size: '2mb'
+            })
+
+            // Gera um nome aleatório
+            const random_name = await str_random(30)
+            let filename = `${new Date().getTime()}_${random_name}.${image.subtype}`
+
+            // renomeia o arquuivo e move para a pasta public/uploads
+            await image.move(Helpers.publicPath('uploads'), {
+                name: filename
+            })
+
+            // verifica se fiu nivudi e retorna o erro
+            if (!image.moved()) {
+                throw image.error()
+            }
+
+            const category_image = await Image.create({
+                path: filename,
+                size: image.size,
+                original_name: image.clientName,
+                extension: image.subtype
+            })
+
+            const category = await Category.create({
+                title,
+                description,
+                image_id: category_image.id
+            })
+
+            return response.status(201).send(category)
+
+        } catch (e) {
+            return response.status(400).send({
+                message: "Erro ao processar sua requisição",
+                error: e.message
+            })
+        }
     }
 
     /**

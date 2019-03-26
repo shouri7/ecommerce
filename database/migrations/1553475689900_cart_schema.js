@@ -5,7 +5,7 @@ const Schema = use('Schema')
 
 class CartSchema extends Schema {
     up() {
-        this.create('cart', (table) => {
+        this.create('carts', (table) => {
             table.increments()
             table.decimal('total', 12, 2)
             table.boolean('ordered').defaultTo(false)
@@ -15,7 +15,7 @@ class CartSchema extends Schema {
     }
 
     down() {
-        this.drop('cart')
+        this.drop('carts')
     }
 }
 

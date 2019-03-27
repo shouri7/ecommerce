@@ -10,6 +10,7 @@ const Helpers = use('Helpers')
 const {
     str_random
 } = use('App/Helpers')
+const Database = use('Database')
 
 /**
  * Resourceful controller for interacting with categories
@@ -61,6 +62,7 @@ class CategoryController {
         response
     }) {
         try {
+            const transaction = await Database.beginTransaction()
             const {
                 title,
                 description
@@ -87,21 +89,25 @@ class CategoryController {
             }
 
             const category_image = await Image.create({
-                path: filename,
-                size: image.size,
-                original_name: image.clientName,
-                extension: image.subtype
-            })
+                    path: filename,
+                    size: image.size,
+                    original_name: image.clientName,
+                    extension: image.subtype
+                },
+                transaction)
 
             const category = await Category.create({
-                title,
-                description,
-                image_id: category_image.id
-            })
+                    title,
+                    description,
+                    image_id: category_image.id
+                },
+                transaction)
 
+            await transaction.commit()
             return response.status(201).send(category)
 
         } catch (e) {
+            await transaction.rollback()
             return response.status(400).send({
                 message: "Erro ao processar sua requisição",
                 error: e.message
@@ -126,22 +132,6 @@ class CategoryController {
     }) {}
 
     /**
-     * Render a form to update an existing category.
-     * GET categories/:id/edit
-     *
-     * @param {object} ctx
-     * @param {Request} ctx.request
-     * @param {Response} ctx.response
-     * @param {View} ctx.view
-     */
-    async edit({
-        params,
-        request,
-        response,
-        view
-    }) {}
-
-    /**
      * Update category details.
      * PUT or PATCH categories/:id
      *
@@ -149,11 +139,10 @@ class CategoryController {
      * @param {Request} ctx.request
      * @param {Response} ctx.response
      */
-    async update({
-        params,
-        request,
-        response
-    }) {}
+    async update({params, request, response}) {
+        const data = request.all()
+        return response.send(data)
+    }
 
     /**
      * Delete a category with id.
